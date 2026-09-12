@@ -1,5 +1,6 @@
 {
   "name": "lgrdev-mcp-seo",
+  "description": "Outils SEO pour sites Hugo : audit du maillage interne, suggestions de liens sémantiques et validation des modifications.",
   "owner": { "name": "lgrdev" },
   "plugins": [
     {
