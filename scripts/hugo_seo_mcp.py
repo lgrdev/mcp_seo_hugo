@@ -1,4 +1,6 @@
+import html
 import re
+from datetime import datetime
 from pathlib import Path
 from fastmcp import FastMCP
 import frontmatter
@@ -9,6 +11,7 @@ import chromadb
 mcp = FastMCP("Hugo SEO Linking Agent")
 
 CONTENT_DIR = Path("./content")
+AUDIT_DIR = Path("./audit-seo")
 
 # Initialisation de ChromaDB (persistant sur disque pour aller plus vite)
 chroma_client = chromadb.PersistentClient(path="./.chroma_seo")
@@ -49,6 +52,55 @@ def build_graph() -> nx.DiGraph:
     return G
 
 
+def render_audit_html(G: nx.DiGraph, orphans: list[str]) -> str:
+    rows = "\n".join(
+        f"<tr><td>{html.escape(orphan)}</td>"
+        f"<td>{html.escape(G.nodes[orphan]['title'])}</td>"
+        f"<td>{html.escape(G.nodes[orphan]['slug'])}</td></tr>"
+        for orphan in orphans
+    )
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Audit SEO - {generated_at}</title>
+<style>
+body {{ font-family: sans-serif; margin: 2rem; color: #222; }}
+table {{ border-collapse: collapse; width: 100%; margin-top: 1rem; }}
+th, td {{ border: 1px solid #ccc; padding: 0.5rem; text-align: left; }}
+th {{ background: #f0f0f0; }}
+.summary {{ margin-bottom: 1rem; }}
+</style>
+</head>
+<body>
+<h1>Audit SEO - Maillage interne</h1>
+<p class="summary">Généré le {generated_at}</p>
+<ul class="summary">
+<li>Total pages : {G.number_of_nodes()}</li>
+<li>Total liens internes : {G.number_of_edges()}</li>
+<li>Pages orphelines : {len(orphans)}</li>
+</ul>
+<h2>Pages orphelines</h2>
+<table>
+<thead><tr><th>Path</th><th>Titre</th><th>Slug</th></tr></thead>
+<tbody>
+{rows}
+</tbody>
+</table>
+</body>
+</html>
+"""
+
+
+def write_audit_report(G: nx.DiGraph, orphans: list[str]) -> Path:
+    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"audit_seo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+    file_path = AUDIT_DIR / filename
+    file_path.write_text(render_audit_html(G, orphans), encoding="utf-8")
+    return file_path
+
+
 # --- OUTILS MCP EXPOSÉS À CLAUDE ---
 
 @mcp.tool()
@@ -83,13 +135,16 @@ def sync_and_get_site_audit() -> str:
         col.add(documents=documents, metadatas=metadatas, ids=ids)
 
     orphans = [node for node, in_deg in G.in_degree() if in_deg == 0]
-    
+
+    report_path = write_audit_report(G, orphans)
+
     report = f"Total pages : {G.number_of_nodes()}\n"
     report += f"Total liens internes : {G.number_of_edges()}\n"
     report += f"Pages orphelines ({len(orphans)}) :\n"
     for orphan in orphans:
         report += f"- Path: {orphan} | Titre: {G.nodes[orphan]['title']} | Slug: {G.nodes[orphan]['slug']}\n"
-        
+    report += f"\nRapport HTML : {report_path}\n"
+
     return report
 
 

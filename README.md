@@ -37,3 +37,10 @@ pip install -r requirements.txt
 |sync_and_get_site_audit|Analyse le graphe du site, indexe le contenu dans ChromaDB et retourne le rapport SEO (pages orphelines, métriques).|
 |find_link_opportunities|Cherche dans la base vectorielle les paragraphes les plus pertinents pour mailler vers une page cible.|
 |update_markdown_paragraph|Remplace proprement un paragraphe dans le fichier .md d'origine avec l'ancre insérée par l'IA.|
+
+## Commandes
+
+|Commande|Description|
+|:--------|:--------|
+|`/lgrdev-mcp-seo:init-seo`|Initialise l'index SEO et audite le maillage interne (première utilisation).|
+|`/lgrdev-mcp-seo:sync-seo`|Resynchronise l'index après modification d'articles dans `./content` et relance l'audit.|

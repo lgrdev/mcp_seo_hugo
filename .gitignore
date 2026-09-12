@@ -6,5 +6,6 @@ venv/
 env/
 
 .chroma_seo/
+audit-seo/
 
 .DS_Store
