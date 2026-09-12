@@ -356,6 +356,30 @@ def _set_block_status(block: str, status: str) -> str:
                   count=1, flags=re.MULTILINE | re.IGNORECASE)
 
 
+def build_chunks(pages: dict) -> tuple[list[str], list[dict], list[str]]:
+    """Découpe les pages en paragraphes indexables. Aucun encodage : pur texte."""
+    documents, metadatas, ids = [], [], []
+
+    for rel_path, data in pages.items():
+        cleaned = re.sub(r"```.*?```", "", data["content"], flags=re.DOTALL)
+        cleaned = re.sub(r"!\[.*?\]\(.*?\)", "", cleaned)
+        cleaned = re.sub(r"#+\s+.*", "", cleaned)
+        chunks = [p.strip() for p in cleaned.split("\n\n")
+                  if len(p.strip()) >= 80 and not _is_list_block(p)]
+
+        for chunk in chunks:
+            # Identifiant dérivé du contenu : un paragraphe inchangé garde son id même si
+            # un paragraphe est inséré avant lui, ce qui rend la réindexation incrémentale.
+            chunk_id = f"{rel_path}#{hashlib.sha1(chunk.encode('utf-8')).hexdigest()[:12]}"
+            if chunk_id in ids:
+                continue
+            documents.append(chunk)
+            metadatas.append({"source_path": rel_path, "title": data["title"]})
+            ids.append(chunk_id)
+
+    return documents, metadatas, ids
+
+
 def _sync_collection(embedding_function, documents: list[str], metadatas: list[dict],
                      ids: list[str]) -> dict:
     """Met l'index à jour en n'encodant que les paragraphes nouveaux ou modifiés."""
@@ -411,23 +435,7 @@ def sync_and_get_site_audit() -> str:
     G = graph_from_pages(pages, skipped)
 
     # Réindexation ChromaDB, à partir du même parse que le graphe
-    documents, metadatas, ids = [], [], []
-    for rel_path, data in pages.items():
-        cleaned = re.sub(r"```.*?```", "", data["content"], flags=re.DOTALL)
-        cleaned = re.sub(r"!\[.*?\]\(.*?\)", "", cleaned)
-        cleaned = re.sub(r"#+\s+.*", "", cleaned)
-        chunks = [p.strip() for p in cleaned.split("\n\n")
-                  if len(p.strip()) >= 80 and not _is_list_block(p)]
-
-        for chunk in chunks:
-            # Identifiant dérivé du contenu : un paragraphe inchangé garde son id même si
-            # un paragraphe est inséré avant lui, ce qui rend la réindexation incrémentale.
-            chunk_id = f"{rel_path}#{hashlib.sha1(chunk.encode('utf-8')).hexdigest()[:12]}"
-            if chunk_id in ids:
-                continue
-            documents.append(chunk)
-            metadatas.append({"source_path": rel_path, "title": data["title"]})
-            ids.append(chunk_id)
+    documents, metadatas, ids = build_chunks(pages)
 
     try:
         embedding_function = _embedding_function()
@@ -575,6 +583,64 @@ def _replace_paragraph(file_path: str, old_paragraph: str, new_paragraph: str,
 # Réparation ciblée octet par octet : un ré-encodage global du fichier en cp1252
 # transformerait au contraire tous les accents déjà valides en mojibake.
 BROKEN_SEQUENCES = {b"\xc3\x22": b"\xc3\xbb"}
+
+
+@mcp.tool()
+def get_index_status() -> str:
+    """État de l'index sémantique et du contenu, sans rien modifier ni recalculer d'embeddings."""
+    pages, skipped = load_pages()
+    unreadable = [s for s in skipped if s["reason"].startswith(("encodage", "front matter"))]
+    _, _, expected_ids = build_chunks(pages)
+
+    lines = [f"Contenu : {len(pages)} page(s) dans le périmètre SEO, "
+             f"{len(skipped)} exclue(s), {len(expected_ids)} paragraphe(s) indexable(s)."]
+    if unreadable:
+        lines.append(f"⚠ {len(unreadable)} fichier(s) illisible(s), exclus de l'analyse. "
+                     f"Lance /lgrdev-mcp-seo:repair-seo.")
+
+    # get_collection sans embedding_function : ne charge pas le modèle (mesuré ~1 ms).
+    try:
+        col = chroma_client.get_collection("hugo_seo")
+    except Exception:
+        lines.append("Index sémantique : absent. Lance /lgrdev-mcp-seo:init-seo pour le construire.")
+        col = None
+
+    if col is not None:
+        indexed_model = (col.metadata or {}).get("embedding_model")
+        indexed_ids = set(col.get(include=[])["ids"])
+        to_encode = len(set(expected_ids) - indexed_ids)
+        obsolete = len(indexed_ids - set(expected_ids))
+
+        lines.append(f"Index sémantique : {col.count()} paragraphe(s), "
+                     f"modèle {indexed_model or 'inconnu'}.")
+        if indexed_model != EMBEDDING_MODEL:
+            lines.append(f"⚠ Modèle attendu : {EMBEDDING_MODEL}. La recherche est refusée tant que "
+                         f"l'index n'est pas reconstruit. Lance /lgrdev-mcp-seo:sync-seo.")
+        elif to_encode or obsolete:
+            lines.append(f"⚠ Index décalé : {to_encode} paragraphe(s) à encoder, "
+                         f"{obsolete} obsolète(s). Lance /lgrdev-mcp-seo:sync-seo.")
+        else:
+            lines.append("Index à jour.")
+
+    reports = sorted(AUDIT_DIR.glob("audit_seo_*.html")) if AUDIT_DIR.exists() else []
+    lines.append(f"Dernier audit : {reports[-1]}" if reports
+                 else "Dernier audit : aucun rapport dans ./audit-seo/.")
+
+    if PROPOSALS_FILE.exists():
+        try:
+            proposals = _parse_proposals(PROPOSALS_FILE.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            proposals = []
+        approved = sum(1 for p in proposals if p["approved"])
+        applied = sum(1 for p in proposals
+                      if (p["status"] or "").startswith("APPLIQUÉ"))
+        lines.append(f"Propositions en cours ({PROPOSALS_FILE}) : {len(proposals)} au total, "
+                     f"{approved} cochée(s) OUI, {applied} déjà appliquée(s). "
+                     f"Poursuis avec /lgrdev-mcp-seo:review-seo.")
+    else:
+        lines.append("Propositions en cours : aucune. Lance /lgrdev-mcp-seo:review-seo pour en générer.")
+
+    return "\n".join(lines)
 
 
 @mcp.tool()

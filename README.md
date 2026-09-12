@@ -41,6 +41,7 @@ pip install -r requirements.txt
 |apply_approved_proposals|Applique uniquement les propositions cochées `[x] OUI`. Sauvegarde dans `./.backups_seo/`, option `dry_run`.|
 |archive_proposals_report|Archive le rapport dans `./.archives_seo/` avec horodatage et réinitialise un fichier vierge.|
 |repair_content_encoding|Répare les fichiers Markdown dont l'UTF-8 est cassé. `dry_run=True` par défaut, sauvegarde avant écriture.|
+|get_index_status|Lecture seule : index à jour ou décalé, modèle utilisé, fichiers illisibles, propositions en cours. Ne charge pas le modèle.|
 
 > Premier lancement : le modèle d'embeddings multilingue (`paraphrase-multilingual-MiniLM-L12-v2`, adapté au contenu français) est téléchargé automatiquement (~500 Mo avec torch).
 
@@ -51,6 +52,11 @@ pip install -r requirements.txt
 |`/lgrdev-mcp-seo:init-seo`|Initialise l'index SEO et audite le maillage interne (première utilisation).|
 |`/lgrdev-mcp-seo:sync-seo`|Resynchronise l'index après modification d'articles dans `./content` et relance l'audit.|
 |`/lgrdev-mcp-seo:review-seo`|Boucle de validation : génère les propositions de liens, applique celles cochées `[x] OUI`, archive le rapport.|
+|`/lgrdev-mcp-seo:status-seo`|État de l'index et du contenu, sans rien modifier. Indique la prochaine action utile.|
+|`/lgrdev-mcp-seo:repair-seo`|Répare l'encodage des fichiers Markdown cassés (simulation d'abord, puis réparation avec sauvegarde).|
+|`/lgrdev-mcp-seo:boost-page <chemin>`|Maille une page précise : cherche les meilleurs paragraphes d'accueil et insère le lien après validation.|
+
+`init-seo` et `sync-seo` appellent le même outil : le premier passage encode tout le contenu, les suivants sont incrémentaux.
 
 ## Tests
 

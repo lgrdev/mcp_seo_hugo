@@ -4,7 +4,9 @@ disable-model-invocation: true
 allowed-tools: [mcp__plugin_lgrdev-mcp-seo_hugo-seo__sync_and_get_site_audit]
 ---
 
-L'utilisateur a modifié des articles dans `./content`. Appelle `sync_and_get_site_audit` pour reconstruire le graphe de liens, ré-indexer le contenu à jour (l'outil recrée la collection ChromaDB en entier à chaque appel), et générer un nouveau rapport HTML dans `./audit-seo/`.
+L'utilisateur a modifié des articles dans `./content`. Appelle `sync_and_get_site_audit` pour reconstruire le graphe de liens, mettre l'index à jour et générer un nouveau rapport HTML dans `./audit-seo/`.
+
+L'indexation est incrémentale : seuls les paragraphes nouveaux ou modifiés sont encodés, les autres sont réutilisés. Un sync sans changement prend une fraction de seconde.
 
 Présente ensuite à l'utilisateur :
 - Chemin du nouveau fichier HTML généré (`./audit-seo/audit_seo_YYYYMMDD_HHMMSS.html`)
