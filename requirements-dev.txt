@@ -1,6 +1,6 @@
-# Dépendances pour lancer les tests. fastmcp et chromadb sont remplacés par des
-# stubs dans tests/conftest.py : les tests portent sur la logique pure, pas sur
-# le serveur MCP ni sur l'index vectoriel, et n'ont donc pas besoin de torch.
+# Dépendances de test uniquement. Le plugin lui-même n'en a aucune : scripts/seoctl.py
+# et scripts/seolib/ n'utilisent que la bibliothèque standard.
+# PyYAML sert d'oracle dans tests/test_frontmatter_oracle.py, qui compare le mini-lecteur
+# de front matter à un vrai parseur YAML sur le corpus réel.
 pytest>=8,<9
-python-frontmatter>=1.3.0,<2
-networkx>=3.6.1,<4
+PyYAML>=6,<7
