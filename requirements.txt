@@ -1,0 +1,5 @@
+fastmcp
+python-frontmatter
+networkx
+chromadb
+sentence-transformers

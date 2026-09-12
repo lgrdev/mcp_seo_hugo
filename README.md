@@ -13,12 +13,22 @@ Un agent IA sous forme de serveur **MCP (Model Context Protocol)** permettant à
 - Python 3.10 ou supérieur
 - Un projet Hugo avec un dossier `content/`
 
-Installe les dépendances Python requises :
+### Installation via plugin Claude Code
+
+```bash
+/plugin marketplace add lgrdev/mcp_seo_hugo
+claude plugin install lgrdev-mcp-seo@lgrdev-mcp-seo
+pip install -r requirements.txt
+```
+
+L'installation du plugin déclare le serveur MCP automatiquement dans Claude Code ; les dépendances Python restent à installer manuellement (le système de plugins ne gère pas les dépendances Python).
+
+### Installation manuelle
 
 ```bash
 sudo apt update
 sudo apt install -y build-essential python3-dev python3-pip python3-venv
-pip install fastmcp python-frontmatter networkx chromadb sentence-transformers
+pip install -r requirements.txt
 ```
 
 ## outils MCP exposés

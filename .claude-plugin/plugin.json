@@ -1,0 +1,9 @@
+{
+  "name": "lgrdev-mcp-seo",
+  "version": "1.0.0",
+  "description": "Hugo site SEO internal-linking MCP tools (graph audit, semantic link suggestions, paragraph patch)",
+  "author": { "name": "lgrdev" },
+  "homepage": "https://github.com/lgrdev/mcp_seo_hugo",
+  "repository": "https://github.com/lgrdev/mcp_seo_hugo",
+  "license": "MIT"
+}

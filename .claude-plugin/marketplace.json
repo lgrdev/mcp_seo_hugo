@@ -1,0 +1,12 @@
+{
+  "name": "lgrdev-mcp-seo",
+  "owner": { "name": "lgrdev" },
+  "plugins": [
+    {
+      "name": "lgrdev-mcp-seo",
+      "source": ".",
+      "description": "Hugo site SEO internal-linking MCP tools",
+      "version": "1.0.0"
+    }
+  ]
+}
