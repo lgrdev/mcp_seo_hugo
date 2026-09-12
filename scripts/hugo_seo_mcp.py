@@ -27,7 +27,7 @@ def build_graph() -> nx.DiGraph:
     for md_file in CONTENT_DIR.rglob("*.md"):
         try:
             post = frontmatter.load(md_file)
-            if post.get("draft", False):
+            if post.get("draft", False) or not post.get("option_seo", True):
                 continue
             rel_path = str(md_file.relative_to(CONTENT_DIR))
             slug = post.get("slug") or md_file.stem
@@ -111,8 +111,11 @@ def sync_and_get_site_audit() -> str:
     # Réindexation ChromaDB
     documents, metadatas, ids = [], [], []
     for md_file in CONTENT_DIR.rglob("*.md"):
-        post = frontmatter.load(md_file)
-        if post.get("draft", False):
+        try:
+            post = frontmatter.load(md_file)
+        except (UnicodeDecodeError, ValueError):
+            continue
+        if post.get("draft", False) or not post.get("option_seo", True):
             continue
         rel_path = str(md_file.relative_to(CONTENT_DIR))
         title = post.get("title", md_file.stem)
