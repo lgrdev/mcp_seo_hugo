@@ -5,8 +5,8 @@ __pycache__/
 venv/
 env/
 
-.chroma_seo/
 audit-seo/
+.seo_work/
 propositions_seo.md
 .archives_seo/
 .backups_seo/

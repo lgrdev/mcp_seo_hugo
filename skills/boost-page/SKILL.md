@@ -1,34 +1,60 @@
 ---
-description: Renforce le maillage interne vers une page précise : cherche les meilleurs paragraphes d'accueil et insère le lien après validation.
+description: Renforce le maillage interne vers une page précise : classe les paragraphes d'accueil possibles et insère le lien après validation.
 disable-model-invocation: true
 arguments: [page]
-allowed-tools: [mcp__plugin_lgrdev-mcp-seo_hugo-seo__find_link_opportunities, mcp__plugin_lgrdev-mcp-seo_hugo-seo__update_markdown_paragraph]
+allowed-tools: ["Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py *)", "Read", "Write"]
 ---
 
 Page cible demandée : `$page`
 
 Traitement page par page, à la différence de `/lgrdev-mcp-seo:review-seo` qui travaille par lot.
 
-**1. Chercher les opportunités**
+**1. Classer les paragraphes d'accueil**
 
-Appelle `find_link_opportunities` avec `target_path` = `$page`. Le chemin attendu est relatif à `content/`, par exemple `blog/2026-07/mon-article.md`.
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py" candidates --target "$page" --top 10
+```
 
+Le chemin attendu est relatif à `content/`, par exemple `blog/2026-07/mon-article.md`.
 Si `$page` est vide, demande la page cible avant d'aller plus loin.
 
-Gère les deux erreurs que l'outil retourne :
-- `Page cible introuvable` → le chemin ne correspond à aucune page analysée. Propose les chemins plausibles et redemande.
-- `Index vide` ou message de modèle différent → l'index n'est pas exploitable : renvoie vers `/lgrdev-mcp-seo:sync-seo`.
+Si la sortie contient `Page cible introuvable`, le chemin ne correspond à aucune page du
+périmètre SEO. La page est peut-être en `draft`, en `robots: noindex` ou en `option_seo: false` ;
+sinon propose les chemins plausibles et redemande.
+
+Une liste de candidats vide signifie qu'aucun paragraphe ne partage de vocabulaire avec la cible,
+ou que toutes les pages proches la lient déjà. Dis-le plutôt que de forcer un lien.
 
 **2. Présenter et choisir**
 
-Pour chaque candidat, montre la page source, son titre, et le paragraphe d'accueil proposé. Laisse l'utilisateur choisir ceux qu'il retient : ne décide pas à sa place.
+Pour chaque candidat, montre la page source, son titre et le paragraphe d'accueil. Juge le sens,
+pas le score : un score plus bas peut être le bon choix. Laisse l'utilisateur trancher.
 
-**3. Rédiger l'ancre**
+**3. Proposer l'ancre, puis appliquer**
 
-Pour chaque paragraphe retenu, propose le paragraphe réécrit avec le lien inséré. Ancre l'expression déjà présente dans le texte quand c'est possible, plutôt que d'ajouter une phrase. Montre le avant/après et demande validation.
+Écris les choix retenus dans `.seo_work/choix.json` :
 
-**4. Appliquer**
+```json
+{"picks": [{"target_path": "$page", "source_path": "<page hôte>",
+            "paragraph_text": "<paragraphe copié à l'octet près>",
+            "anchor_phrase": "<expression déjà présente dans le paragraphe, optionnelle>"}]}
+```
 
-Appelle `update_markdown_paragraph` avec le paragraphe d'origine **exactement** tel que retourné par `find_link_opportunities` (espaces compris) comme `old_paragraph`, sinon le remplacement échoue.
+Puis :
 
-L'outil sauvegarde le fichier avant écriture et refuse de modifier un paragraphe présent plusieurs fois dans son fichier. Si ce refus arrive, indique-le : la retouche est à faire à la main.
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py" proposals --from .seo_work/choix.json
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py" apply --dry-run
+```
+
+Montre le avant/après du paragraphe, demande validation, et seulement ensuite :
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py" apply
+```
+
+`paragraph_text` doit être copié **exactement** depuis la sortie de `candidates`, espaces compris,
+sinon la proposition est rejetée. Le fichier source est sauvegardé avant écriture, et un
+paragraphe présent plusieurs fois dans son fichier est refusé : la retouche est alors manuelle.
+
+Termine avec `archive` si l'utilisateur ne veut pas garder le rapport d'une seule proposition.

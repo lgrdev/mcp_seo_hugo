@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "hugo-seo": {
-      "command": "python3",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/hugo_seo_mcp.py"]
-    }
-  }
-}

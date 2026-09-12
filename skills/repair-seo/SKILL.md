@@ -1,25 +1,38 @@
 ---
-description: Détecte et répare les fichiers Markdown de ./content dont l'encodage UTF-8 est cassé, puis réindexe.
+description: Détecte et répare les fichiers Markdown de ./content dont l'encodage UTF-8 est cassé, puis relance l'audit.
 disable-model-invocation: true
-allowed-tools: [mcp__plugin_lgrdev-mcp-seo_hugo-seo__repair_content_encoding, mcp__plugin_lgrdev-mcp-seo_hugo-seo__sync_and_get_site_audit]
+allowed-tools: ["Bash(python3 ${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py *)"]
 ---
 
 Cette commande écrit dans les fichiers sources de l'utilisateur. Procède toujours en deux temps.
 
 **1. Simulation, systématiquement**
 
-Appelle `repair_content_encoding` sans argument (`dry_run=True` par défaut). Présente :
-- la liste des fichiers concernés et le nombre de séquences cassées
-- les fichiers signalés comme « à traiter manuellement » : l'outil ne devine jamais un caractère qu'il ne reconnaît pas, ceux-là restent à corriger à la main
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py" repair
+```
 
-Si aucun fichier n'est cassé, dis-le et arrête-toi ici.
+Sans `--apply`, rien n'est écrit. Présente :
+
+- la liste des fichiers concernés et le nombre de séquences cassées ;
+- les fichiers signalés « à traiter manuellement » : l'outil ne devine jamais un caractère
+  qu'il ne reconnaît pas, ceux-là restent à corriger à la main.
+
+Si tous les fichiers sont déjà en UTF-8 valide, dis-le et arrête-toi ici.
 
 **2. Réparation, après accord explicite**
 
-Demande confirmation, puis appelle `repair_content_encoding` avec `dry_run=False`. Rapporte :
-- le nombre de fichiers réparés
-- le dossier de sauvegarde des versions d'origine (`.backups_seo/<horodatage>/`)
+Demande confirmation, puis :
 
-Propose ensuite `sync_and_get_site_audit` : les pages réparées deviennent analysables, donc les chiffres de l'audit changent.
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/seoctl.py" repair --apply
+```
 
-N'appelle jamais la réparation sans avoir montré la simulation d'abord.
+La correction est faite octet par octet sur des motifs connus. C'est volontaire : ré-encoder un
+fichier entier transformerait ses accents déjà valides en mojibake. Rapporte le nombre de
+fichiers réparés et le dossier de sauvegarde (`.backups_seo/<horodatage>/`).
+
+Propose ensuite `/lgrdev-mcp-seo:sync-seo` : les pages réparées entrent dans le périmètre
+d'analyse, donc les chiffres de l'audit changent.
+
+N'appelle jamais `--apply` sans avoir montré la simulation d'abord.
