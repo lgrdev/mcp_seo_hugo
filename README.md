@@ -34,9 +34,15 @@ pip install -r requirements.txt
 ## outils MCP exposés
 |Outil MCP|Description|
 |:--------|:--------|
-|sync_and_get_site_audit|Analyse le graphe du site, indexe le contenu dans ChromaDB et retourne le rapport SEO (pages orphelines, métriques).|
+|sync_and_get_site_audit|Analyse le graphe du site, indexe le contenu dans ChromaDB et génère le rapport HTML dans `./audit-seo/` (pages orphelines, liens non résolus, fichiers illisibles).|
 |find_link_opportunities|Cherche dans la base vectorielle les paragraphes les plus pertinents pour mailler vers une page cible.|
 |update_markdown_paragraph|Remplace proprement un paragraphe dans le fichier .md d'origine avec l'ancre insérée par l'IA.|
+|generate_proposals_report|Génère `propositions_seo.md` : une proposition de lien par page orpheline ou sous-maillée, à valider à la main.|
+|apply_approved_proposals|Applique uniquement les propositions cochées `[x] OUI`. Sauvegarde dans `./.backups_seo/`, option `dry_run`.|
+|archive_proposals_report|Archive le rapport dans `./.archives_seo/` avec horodatage et réinitialise un fichier vierge.|
+|repair_content_encoding|Répare les fichiers Markdown dont l'UTF-8 est cassé. `dry_run=True` par défaut, sauvegarde avant écriture.|
+
+> Premier lancement : le modèle d'embeddings multilingue (`paraphrase-multilingual-MiniLM-L12-v2`, adapté au contenu français) est téléchargé automatiquement (~500 Mo avec torch).
 
 ## Commandes
 
@@ -44,3 +50,13 @@ pip install -r requirements.txt
 |:--------|:--------|
 |`/lgrdev-mcp-seo:init-seo`|Initialise l'index SEO et audite le maillage interne (première utilisation).|
 |`/lgrdev-mcp-seo:sync-seo`|Resynchronise l'index après modification d'articles dans `./content` et relance l'audit.|
+|`/lgrdev-mcp-seo:review-seo`|Boucle de validation : génère les propositions de liens, applique celles cochées `[x] OUI`, archive le rapport.|
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Les tests couvrent la logique pure (ancres, parsing du rapport de propositions, résolution des liens internes, filtres de contenu, garde-fous d'écriture). `fastmcp` et `chromadb` sont remplacés par des stubs dans `tests/conftest.py`, donc l'installation de test reste légère (pas de torch).
