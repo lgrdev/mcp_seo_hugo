@@ -23,6 +23,8 @@ pip install -r requirements.txt
 
 L'installation du plugin déclare le serveur MCP automatiquement dans Claude Code ; les dépendances Python restent à installer manuellement (le système de plugins ne gère pas les dépendances Python).
 
+Si `pip install` est oublié, le serveur MCP refuse de démarrer et les commandes apparaissent sans outils. Le message dans les logs MCP indique alors la dépendance manquante et le chemin exact du `requirements.txt` à installer.
+
 ### Installation manuelle
 
 ```bash

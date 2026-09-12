@@ -2,12 +2,24 @@ import hashlib
 import html
 import re
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
-from fastmcp import FastMCP
-import frontmatter
-import networkx as nx
-import chromadb
+
+# Le plugin n'installe pas les dépendances Python : sans ce garde-fou, l'absence
+# d'une dépendance ne laisse qu'un traceback dans les logs MCP et l'utilisateur
+# voit simplement des commandes sans outils.
+try:
+    from fastmcp import FastMCP
+    import frontmatter
+    import networkx as nx
+    import chromadb
+except ImportError as exc:
+    sys.exit(
+        f"hugo_seo_mcp : dépendance Python manquante ({exc.name}).\n"
+        f"Installe les dépendances du plugin :\n"
+        f"    pip install -r {Path(__file__).resolve().parent.parent / 'requirements.txt'}"
+    )
 
 # Initialisation du serveur MCP
 mcp = FastMCP("Hugo SEO Linking Agent")
